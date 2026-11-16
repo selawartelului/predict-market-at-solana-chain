@@ -1,0 +1,91 @@
+
+ // SPDX-License-Identifier: MIT
+ pragma solidity ^0.8.20;
+
+ contract SolanaMarketPredictor {
+
+     enum Direction {
+         UP,
+         DOWN
+     }
+
+     struct Prediction {
+         string asset;
+         uint256 startPrice;
+         uint256 targetPrice;
+         uint256 actualPrice;
+         Direction direction;
+         bool resolved;
+     }
+
+     Prediction[] public predictions;
+
+     uint256 public correct;
+     uint256 public incorrect;
+
+     address public admin;
+
+     constructor() {
+         admin = msg.sender;
+     }
+
+     // Create market prediction
+     function predict(
+         string memory asset,
+         uint256 startPrice,
+         uint256 targetPrice,
+         Direction direction
+     ) public {
+         require(startPrice > 0, "Invalid price");
+
+         predictions.push(
+             Prediction({
+                 asset: asset,
+                 startPrice: startPrice,
+                 targetPrice: targetPrice,
+                 actualPrice: 0,
+                 direction: direction,
+                 resolved: false
+             })
+         );
+     }
+
+     // Resolve prediction using actual price
+     function resolve(
+         uint256 id,
+         uint256 actualPrice
+     ) public {
+         require(msg.sender == admin, "Admin only");
+         require(id < predictions.length, "Invalid ID");
+         require(!predictions[id].resolved, "Already resolved");
+
+         Prediction storage p = predictions[id];
+
+         p.actualPrice = actualPrice;
+         p.resolved = true;
+
+         bool isCorrect =
+             p.direction == Direction.UP
+             ? actualPrice > p.startPrice
+             : actualPrice < p.startPrice;
+
+         if (isCorrect) {
+             correct++;
+         } else {
+             incorrect++;
+         }
+     }
+
+     // Accuracy percentage
+     function accuracy() public view returns (uint256) {
+         uint256 total = correct + incorrect;
+
+         if (total == 0) return 0;
+
+         return (correct * 100) / total;
+     }
+
+     function totalPredictions() public view returns (uint256) {
+         return predictions.length;
+     }
+ }
